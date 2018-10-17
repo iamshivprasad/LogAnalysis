@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import psycopg2
 
 DATABASE = "news"
@@ -18,28 +20,16 @@ def Init():
 
     else:
         g_Cursor.execute("""
-                        select table_name
-                            from information_schema.views
-                        where
-                            table_name='view_analysiscolumnsconsolidated'""")
-        if g_Cursor.rowcount:
-            g_Cursor.execute("""drop view view_analysiscolumnsconsolidated""")
-
-        g_Cursor.execute("""
-                        create view
+                        create or replace view
                             view_analysiscolumnsconsolidated
                         as
                             select log.path, log.status,
                                     log.time, articles.title, authors.name
-                                from log
-                        join
-                            articles
-                                on
-                                    log.path like concat('%', articles.slug)
-                        join
-                            authors
-                                on
-                                    articles.author = authors.id""")
+                                from log, articles, authors
+                            where
+                                log.path = '/article/' || articles.slug
+                                    and
+                                articles.author = authors.id""")
         conn.commit()
 
 
@@ -60,7 +50,8 @@ def GetPopularArticles():
         print("\n1. What are the most popular three articles of all time?")
         print("---------------------------------------------------------")
         for row in rows:
-            print(""""%s" - %s views""" % (row[0], row[1]))
+            print('"{article}" - {count} views'.format(
+                            article=row[0], count=row[1]))
 
     except psycopg2.DatabaseError as e:
         print("Database exception occurred!!!...")
@@ -70,9 +61,6 @@ def GetPopularArticles():
 
 def GetPopularityOfAuthors():
     try:
-        # conn = psycopg2.connect(database=DATABASE)
-
-        # cursor = conn.cursor()
         g_Cursor.execute("""
                         select name, count(name) as no_of_views
                             from view_analysiscolumnsconsolidated
@@ -87,7 +75,8 @@ def GetPopularityOfAuthors():
         print("\n2. Who are the most popular article authors of all time?")
         print("---------------------------------------------------------")
         for row in rows:
-            print("%s - %s views" % (row[0], row[1]))
+            print('{article} - {count} views'.format(
+                            article=row[0], count=row[1]))
 
     except psycopg2.DatabaseError as e:
         print("Database exception occurred!!!...")
@@ -127,9 +116,10 @@ def GetDaysBasedOnErrorRateRestriction():
         rows = g_Cursor.fetchall()
 
         print(
-        '\n3. On which days did more than 1% of requests lead to errors?')
+         '\n3. On which days did more than 1% of requests lead to errors?')
         print(
-        '--------------------------------------------------------------')
+         '--------------------------------------------------------------')
+
         for row in rows:
             print('{date:%d, %b %Y} - {err_perc:.1f}% errors'.format(
                 date=row[0],

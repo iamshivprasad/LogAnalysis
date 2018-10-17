@@ -23,6 +23,22 @@ Copy the file ‘loganalysis.py’ to the target directory. Execute the followin
 ```
 python loganalysis.py
 ```
+
+Tool creates the view 'view_analysiscolumnsconsolidated' to do the analysis. It is created by the following statement.
+
+```
+create or replace view
+    view_analysiscolumnsconsolidated
+as
+    select log.path, log.status,
+            log.time, articles.title, authors.name
+        from log, articles, authors
+    where
+        log.path = '/article/' || articles.slug
+            and
+        articles.author = authors.id;
+```
+
 ## Author
 
 -   Shiv - iamshiv.trainings@gmail.com
